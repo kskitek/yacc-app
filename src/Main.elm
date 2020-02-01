@@ -22,11 +22,16 @@ main =
 type Model
   = Failure
   | Loading
-  | Success Board
+  | Success BoardState
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  (Loading, getBoard)
+  (Loading, getBoardState)
+
+type alias BoardState =
+  { red: Board
+  , blue: Board
+  }
 
 type alias Board = List (List (Maybe Cell))
 
@@ -37,13 +42,13 @@ type alias Cell =
 
 type Msg
   = MorePlease
-  | GotBoard (Result Http.Error Board)
+  | GotBoard (Result Http.Error BoardState)
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     MorePlease ->
-      (Loading, getBoard)
+      (Loading, getBoardState)
 
     GotBoard result ->
       case result of
@@ -96,11 +101,20 @@ viewGif model =
       text "Loading..."
 
     Success board ->
-      viewBoard board
+      viewBoardState board
 
-viewBoard : Board -> Html Msg
-viewBoard board =
-  div [class "board"] (List.map viewRow board)
+type alias RVB = String
+
+viewBoardState : BoardState -> Html Msg
+viewBoardState state =
+  div [class "board"]
+  [ viewBoard state.red "red"
+  , viewBoard (List.reverse state.blue) "blue"
+  ]
+
+viewBoard : Board -> RVB -> Html Msg
+viewBoard board rvb =
+  div [class "board-half", class rvb] (List.map viewRow board)
 
 viewRow : List (Maybe Cell) -> Html Msg
 viewRow row =
@@ -117,12 +131,18 @@ viewCell cell =
     Nothing ->
       div [class "cell", class "cell-empty"] []
 
-getBoard : Cmd Msg
-getBoard =
+getBoardState : Cmd Msg
+getBoardState =
   Http.get
     { url = "http://localhost:8080/start"
-    , expect = Http.expectJson GotBoard boardDecoder
+    , expect = Http.expectJson GotBoard boardStateDecoder
     }
+
+boardStateDecoder : Decoder BoardState
+boardStateDecoder =
+  map2 BoardState
+  (field "red" boardDecoder)
+  (field "blue" boardDecoder)
 
 boardDecoder : Decoder (List (List (Maybe Cell)))
 boardDecoder =
