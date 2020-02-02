@@ -19,7 +19,7 @@ body {
 .cell {
   height: 60px;
   width: 60px;
-  margin: 1px 1px 1px 1px;
+  margin: 2px 2px 2px 2px;
   border: 1px solid #000000;
   border-radius: 4px 4px 4px 4px;
   border-color: rgb(140, 140, 140);
@@ -27,6 +27,21 @@ body {
   align-items: flex-end;
   justify-content: space-between;
 }
+
+.unit, .battle {
+  flex-grow: 1;
+  display: flex;
+}
+
+.unit {
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.battle {
+  background: red;
+}
+
 
 .health {
   color: rgb(70, 219, 132);
@@ -59,5 +74,9 @@ body {
 
 .blue {
   background: rgb(181, 225, 255);
+}
+
+.board-half {
+  padding: 2px 0px 2px 0px;
 }
 

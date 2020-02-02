@@ -9,6 +9,7 @@ import Json.Decode exposing (Decoder, field, list, int, map2, nullable)
 import Debug
 import Maybe
 import List exposing (map)
+import Array exposing (Array)
 
 main =
   Browser.element
@@ -36,18 +37,23 @@ type alias BoardState =
 type alias Board = List (List (Maybe Cell))
 
 type alias Cell =
+  { units: Array Unit
+  }
+
+type alias Unit =
   { health : Int
   , strength : Int
   }
 
+
 type Msg
-  = MorePlease
+  = NextRound
   | GotBoard (Result Http.Error BoardState)
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    MorePlease ->
+    NextRound ->
       (Loading, getBoardState)
 
     GotBoard result ->
@@ -88,7 +94,10 @@ view : Model -> Html Msg
 view model =
   div []
     [ Html.node "link" [rel "stylesheet", href "style.css" ] []
-    , div [class "content"] [viewGif model]
+    , div [class "content"]
+    [ viewGif model
+    , button [class "btn", onClick NextRound ] [text "Next"]
+    ]
     ]
 
 viewGif : Model -> Html Msg
@@ -109,7 +118,7 @@ viewBoardState : BoardState -> Html Msg
 viewBoardState state =
   div [class "board"]
   [ viewBoard state.red "red"
-  , viewBoard (List.reverse state.blue) "blue"
+  , viewBoard state.blue "blue"
   ]
 
 viewBoard : Board -> RVB -> Html Msg
@@ -121,20 +130,45 @@ viewRow row =
   div [class "row"] (List.map viewCell row)
 
 viewCell : Maybe Cell -> Html Msg
-viewCell cell =
-  case cell of
-    Just c ->
-      div [class "cell"] [
-        div [class "strength"] [text (String.fromInt c.strength)]
-        , div [class "health"] [text (String.fromInt c.health)]
-        ]
+viewCell maybeCell =
+  case maybeCell of
+    Just cell ->
+      let
+        noOfUnits = Array.length cell.units
+      in
+      if noOfUnits == 1 then
+        let
+            unit = case Array.get 0 cell.units of
+              Just u -> u
+              Nothing -> {strength= 0, health= 0}
+        in
+        div [class "cell"] [viewUnit unit]
+      else if noOfUnits > 1 then
+        div [class "cell"] [viewBattle cell]
+      else
+        div [class "cell"] [text "?"]
     Nothing ->
       div [class "cell", class "cell-empty"] []
+
+viewUnit : Unit -> Html Msg
+viewUnit unit =
+  div [class "unit"]
+  [ div [class "strength"] [text (String.fromInt unit.strength)]
+  , div [class "health"] [text (String.fromInt unit.health)]
+  ]
+
+viewBattle : Cell -> Html Msg
+viewBattle cell =
+  div [class "battle"] [text (String.fromInt (Array.length cell.units))]
+
+viewBattleDetails : Cell -> Html Msg
+viewBattleDetails cell =
+  div [class "battleDetails"] []
 
 getBoardState : Cmd Msg
 getBoardState =
   Http.get
-    { url = "http://localhost:8080/start"
+    { url = "http://localhost:8080/next"
     , expect = Http.expectJson GotBoard boardStateDecoder
     }
 
@@ -150,7 +184,12 @@ boardDecoder =
 
 cellDecoder : Decoder Cell
 cellDecoder =
-  map2 Cell
+  Json.Decode.map Cell
+  (field "units" (Json.Decode.array unitDecoder))
+
+unitDecoder : Decoder Unit
+unitDecoder =
+  map2 Unit
   (field "health" int)
   (field "strength" int)
 
