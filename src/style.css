@@ -42,6 +42,16 @@ body {
   background: red;
 }
 
+.battleDetails {
+  position: relative;
+  cursor: pointer;
+  z-index: 1;
+  bottom: -30px;
+  background: #E91E63;
+  box-shadow: 0 0 4px 2px #795548;
+  padding: 2px 2px 2px 2px;
+}
+
 
 .health {
   color: rgb(70, 219, 132);

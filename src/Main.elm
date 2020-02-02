@@ -5,11 +5,11 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
-import Json.Decode exposing (Decoder, field, list, int, map2, nullable)
+import Json.Decode exposing (Decoder)
 import Debug
 import Maybe
 import List exposing (map)
-import Array exposing (Array)
+import Array exposing (Array, map)
 
 main =
   Browser.element
@@ -38,6 +38,7 @@ type alias Board = List (List (Maybe Cell))
 
 type alias Cell =
   { units: Array Unit
+  , showBattle: Bool
   }
 
 type alias Unit =
@@ -48,6 +49,7 @@ type alias Unit =
 
 type Msg
   = NextRound
+  | ShowBattle Cell
   | GotBoard (Result Http.Error BoardState)
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -55,6 +57,9 @@ update msg model =
   case msg of
     NextRound ->
       (Loading, getBoardState)
+
+    ShowBattle cell ->
+      (model, Cmd.none)
 
     GotBoard result ->
       case result of
@@ -112,7 +117,7 @@ viewGif model =
     Success board ->
       viewBoardState board
 
-type alias RVB = String
+type alias Team = String
 
 viewBoardState : BoardState -> Html Msg
 viewBoardState state =
@@ -121,7 +126,7 @@ viewBoardState state =
   , viewBoard state.blue "blue"
   ]
 
-viewBoard : Board -> RVB -> Html Msg
+viewBoard : Board -> Team -> Html Msg
 viewBoard board rvb =
   div [class "board-half", class rvb] (List.map viewRow board)
 
@@ -159,11 +164,21 @@ viewUnit unit =
 
 viewBattle : Cell -> Html Msg
 viewBattle cell =
-  div [class "battle"] [text (String.fromInt (Array.length cell.units))]
+  let
+      battleCell = if cell.showBattle then
+                    viewBattleDetails cell
+                  else
+                    text (String.fromInt (Array.length cell.units))
+  in
+  div [class "battle", onClick (ShowBattle cell)] [battleCell]
 
 viewBattleDetails : Cell -> Html Msg
 viewBattleDetails cell =
-  div [class "battleDetails"] []
+  let
+      unitToCell = \u -> Just {units = Array.fromList [u], showBattle = False}
+  in
+  div [class "battleDetails"]
+    (Array.toList (Array.map  (\u -> viewCell (unitToCell u)) cell.units))
 
 getBoardState : Cmd Msg
 getBoardState =
@@ -174,22 +189,24 @@ getBoardState =
 
 boardStateDecoder : Decoder BoardState
 boardStateDecoder =
-  map2 BoardState
-  (field "red" boardDecoder)
-  (field "blue" boardDecoder)
+  Json.Decode.map2 BoardState
+  (Json.Decode.field "red" boardDecoder)
+  (Json.Decode.field "blue" boardDecoder)
 
 boardDecoder : Decoder (List (List (Maybe Cell)))
 boardDecoder =
-  Json.Decode.list (Json.Decode.list (nullable cellDecoder))
+  Json.Decode.list (Json.Decode.list (Json.Decode.nullable cellDecoder))
 
 cellDecoder : Decoder Cell
 cellDecoder =
-  Json.Decode.map Cell
-  (field "units" (Json.Decode.array unitDecoder))
+  Json.Decode.map2 Cell
+  (Json.Decode.field "units" (Json.Decode.array unitDecoder))
+  (Json.Decode.succeed True)
 
 unitDecoder : Decoder Unit
 unitDecoder =
-  map2 Unit
-  (field "health" int)
-  (field "strength" int)
+  Json.Decode.map2 Unit
+  (Json.Decode.field "health" Json.Decode.int)
+  (Json.Decode.field "strength" Json.Decode.int)
+  -- (Json.Decode.field "rvb" Json.Decode.int)
 
