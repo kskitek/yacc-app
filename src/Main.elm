@@ -127,8 +127,8 @@ viewBoardState state =
   ]
 
 viewBoard : Board -> Team -> Html Msg
-viewBoard board rvb =
-  div [class "board-half", class rvb] (List.map viewRow board)
+viewBoard board team =
+  div [class "board-half", class team] (List.map viewRow board)
 
 viewRow : List (Maybe Cell) -> Html Msg
 viewRow row =
@@ -208,5 +208,5 @@ unitDecoder =
   Json.Decode.map2 Unit
   (Json.Decode.field "health" Json.Decode.int)
   (Json.Decode.field "strength" Json.Decode.int)
-  -- (Json.Decode.field "rvb" Json.Decode.int)
+  -- (Json.Decode.field "team" Json.Decode.int)
 
